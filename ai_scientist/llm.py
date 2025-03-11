@@ -42,6 +42,9 @@ AVAILABLE_LLMS = [
     # Google Gemini models
     "gemini-1.5-flash",
     "gemini-1.5-pro",
+
+    # add ollama api, added by minglei yuan
+    "qwq",
 ]
 
 
@@ -263,6 +266,24 @@ def get_response_from_llm(
         )
         content = response.text
         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
+
+    # added by minglei yuan
+    elif model in ["qwq:latest"]:
+        new_msg_history = msg_history + [{"role": "user", "content": msg}]
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": system_message},
+                *new_msg_history,
+            ],
+            temperature=0.6,
+            max_completion_tokens=MAX_NUM_TOKENS,
+            n=1,
+            seed=0,
+        )
+        content = response.choices[0].message.content
+        new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
+
     else:
         raise ValueError(f"Model {model} not supported.")
 
@@ -329,6 +350,7 @@ def create_client(model):
         return openai.OpenAI(
             api_key=os.environ["DEEPSEEK_API_KEY"],
             base_url="https://api.deepseek.com"
+            #base_url="https://192.168.31.172:8080",
         ), model
     elif model == "llama3.1-405b":
         print(f"Using OpenAI API with {model}.")
@@ -341,5 +363,15 @@ def create_client(model):
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
         client = genai.GenerativeModel(model)
         return client, model
+
+    # add ollama model, added by minglei yuan
+    elif model in ["qwq"]:
+        if model.__eq__("qwq"):
+            model = "qwq:latest"
+        print(f"Using Ollama API with model {model}")
+        return openai.OpenAI(
+            api_key="ollama",
+            base_url="http://localhost:11434/v1"
+        ), model,
     else:
         raise ValueError(f"Model {model} not supported.")
