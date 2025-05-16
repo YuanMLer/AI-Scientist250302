@@ -15,12 +15,24 @@ AVAILABLE_LLMS = [
     "claude-3-5-sonnet-20240620",
     "claude-3-5-sonnet-20241022",
     # OpenAI models
+    "gpt-4o-mini",
     "gpt-4o-mini-2024-07-18",
+    "gpt-4o",
     "gpt-4o-2024-05-13",
     "gpt-4o-2024-08-06",
-    "o1-preview-2024-09-12",
-    "o1-mini-2024-09-12",
+    "gpt-4.1",
+    "gpt-4.1-2025-04-14",
+    "gpt-4.1-mini",
+    "gpt-4.1-mini-2025-04-14",
+    "gpt-4.1-nano",
+    "gpt-4.1-nano-2025-04-14",
+    "o1",
     "o1-2024-12-17",
+    "o1-preview-2024-09-12",
+    "o1-mini",
+    "o1-mini-2024-09-12",
+    "o3-mini",
+    "o3-mini-2025-01-31",
     # OpenRouter models
     "llama3.1-405b",
     # Anthropic Claude models via Amazon Bedrock
@@ -42,9 +54,11 @@ AVAILABLE_LLMS = [
     # Google Gemini models
     "gemini-1.5-flash",
     "gemini-1.5-pro",
-
-    # add ollama api, added by minglei yuan
-    "qwq",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash-thinking-exp-01-21",
+    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.5-pro-exp-03-25",
 ]
 
 
@@ -63,11 +77,7 @@ def get_batch_responses_from_llm(
     if msg_history is None:
         msg_history = []
 
-    if model in [
-        "gpt-4o-2024-05-13",
-        "gpt-4o-mini-2024-07-18",
-        "gpt-4o-2024-08-06",
-    ]:
+    if 'gpt' in model:
         new_msg_history = msg_history + [{"role": "user", "content": msg}]
         response = client.chat.completions.create(
             model=model,
@@ -173,11 +183,7 @@ def get_response_from_llm(
                 ],
             }
         ]
-    elif model in [
-        "gpt-4o-2024-05-13",
-        "gpt-4o-mini-2024-07-18",
-        "gpt-4o-2024-08-06",
-    ]:
+    elif 'gpt' in model:
         new_msg_history = msg_history + [{"role": "user", "content": msg}]
         response = client.chat.completions.create(
             model=model,
@@ -193,7 +199,7 @@ def get_response_from_llm(
         )
         content = response.choices[0].message.content
         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
-    elif model in ["o1-preview-2024-09-12", "o1-mini-2024-09-12"]:
+    elif "o1" in model or "o3" in model:
         new_msg_history = msg_history + [{"role": "user", "content": msg}]
         response = client.chat.completions.create(
             model=model,
@@ -253,37 +259,18 @@ def get_response_from_llm(
         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
     elif "gemini" in model:
         new_msg_history = msg_history + [{"role": "user", "content": msg}]
-        gemini_contents = [{"role": "system", "parts": system_message}]
-        for m in new_msg_history:
-            gemini_contents.append({"role": m["role"], "parts": m["content"]})
-        response = client.generate_content(
-            contents=gemini_contents,
-            generation_config=GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=MAX_NUM_TOKENS,
-                candidate_count=1,
-            ),
-        )
-        content = response.text
-        new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
-
-    # added by minglei yuan
-    elif model in ["qwq:latest"]:
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "user", "content": system_message},
+                {"role": "system", "content": system_message},
                 *new_msg_history,
             ],
-            temperature=0.6,
-            max_completion_tokens=MAX_NUM_TOKENS,
+            temperature=temperature,
+            max_tokens=MAX_NUM_TOKENS,
             n=1,
-            seed=0,
         )
         content = response.choices[0].message.content
         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
-
     else:
         raise ValueError(f"Model {model} not supported.")
 
@@ -339,18 +326,14 @@ def create_client(model):
         client_model = model.split("/")[-1]
         print(f"Using Vertex AI with model {client_model}.")
         return anthropic.AnthropicVertex(), client_model
-    elif 'gpt' in model:
+    elif 'gpt' in model or "o1" in model or "o3" in model:
         print(f"Using OpenAI API with model {model}.")
         return openai.OpenAI(), model
-    elif model in ["o1-preview-2024-09-12", "o1-mini-2024-09-12"]:
-        print(f"Using OpenAI API with model {model}.")
-        return openai.OpenAI(), model
-    elif model in ["deepseek-chat", "deepseek-reasoner"]:
+    elif model in ["deepseek-chat", "deepseek-reasoner", "deepseek-coder"]:
         print(f"Using OpenAI API with {model}.")
         return openai.OpenAI(
             api_key=os.environ["DEEPSEEK_API_KEY"],
             base_url="https://api.deepseek.com"
-            #base_url="https://192.168.31.172:8080",
         ), model
     elif model == "llama3.1-405b":
         print(f"Using OpenAI API with {model}.")
@@ -359,19 +342,10 @@ def create_client(model):
             base_url="https://openrouter.ai/api/v1"
         ), "meta-llama/llama-3.1-405b-instruct"
     elif "gemini" in model:
-        print(f"Using Google Generative AI with model {model}.")
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        client = genai.GenerativeModel(model)
-        return client, model
-
-    # add ollama model, added by minglei yuan
-    elif model in ["qwq"]:
-        if model.__eq__("qwq"):
-            model = "qwq:latest"
-        print(f"Using Ollama API with model {model}")
+        print(f"Using OpenAI API with {model}.")
         return openai.OpenAI(
-            api_key="ollama",
-            base_url="http://localhost:11434/v1"
-        ), model,
+            api_key=os.environ["GEMINI_API_KEY"],
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        ), model
     else:
         raise ValueError(f"Model {model} not supported.")

@@ -9,9 +9,6 @@ import requests
 
 from ai_scientist.llm import get_response_from_llm, extract_json_between_markers, create_client, AVAILABLE_LLMS
 
-# added by minglei yuan
-from loguru import logger
-
 S2_API_KEY = os.getenv("S2_API_KEY")
 
 idea_first_prompt = """{task_description}
@@ -85,10 +82,6 @@ def generate_ideas(
         num_reflections=5,
 ):
     if skip_generation:
-        # added by minglei yuan
-        if args.is_debug:
-            print(f"IDEA path:{osp.join(base_dir, 'ideas.json')}")
-
         # Load existing ideas from file
         try:
             with open(osp.join(base_dir, "ideas.json"), "r") as f:

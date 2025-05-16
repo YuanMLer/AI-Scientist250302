@@ -4,14 +4,14 @@ from openai import OpenAI
 
 client = OpenAI(
     # base_url="http://192.168.31.172:11434/v1",
-    base_url="http://192.168.31.89:11434/v1",
+    base_url="http://192.168.31.172:11434/v1",
     api_key="ollama-api-key"  # required, but unused
 
 )
 
 response = client.chat.completions.create(
     # model = "deepseek-r1:32b",
-    model="qwq:latest",
+    model="qwen3:32b",
     messages=[
         {"role":"system", "content":"you are a helpful assistant"},
         {"role":"system", "content":"Who won the world series in 2020?"},

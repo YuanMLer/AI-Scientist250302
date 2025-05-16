@@ -19,10 +19,6 @@ from ai_scientist.perform_experiments import perform_experiments
 from ai_scientist.perform_review import perform_review, load_paper, perform_improvement
 from ai_scientist.perform_writeup import perform_writeup, generate_latex
 
-
-#added by minglei yuan
-from loguru import logger
-
 NUM_REFLECTIONS = 3
 
 
@@ -92,12 +88,6 @@ def parse_arguments():
         default="semanticscholar",
         choices=["semanticscholar", "openalex"],
         help="Scholar engine to use.",
-    )
-    # added by minglei yuan
-    parser.add_argument(
-        "--is-debug",
-        action="store_true",
-        help="Enable debug mode.",
     )
     return parser.parse_args()
 
@@ -181,7 +171,9 @@ def do_idea(
     shutil.copytree(base_dir, destination_dir, dirs_exist_ok=True)
     with open(osp.join(base_dir, "run_0", "final_info.json"), "r") as f:
         baseline_results = json.load(f)
-    baseline_results = {k: v["means"] for k, v in baseline_results.items()}
+    # Check if baseline_results is a dictionary before extracting means
+    if isinstance(baseline_results, dict):
+        baseline_results = {k: v["means"] for k, v in baseline_results.items()}
     exp_file = osp.join(folder_name, "experiment.py")
     vis_file = osp.join(folder_name, "plot.py")
     notes = osp.join(folder_name, "notes.txt")
@@ -208,6 +200,8 @@ def do_idea(
         )
         if model == "deepseek-coder-v2-0724":
             main_model = Model("deepseek/deepseek-coder")
+        elif model == "deepseek-reasoner":
+            main_model = Model("deepseek/deepseek-reasoner")
         elif model == "llama3.1-405b":
             main_model = Model("openrouter/meta-llama/llama-3.1-405b-instruct")
         else:
@@ -242,6 +236,8 @@ def do_idea(
             fnames = [exp_file, writeup_file, notes]
             if model == "deepseek-coder-v2-0724":
                 main_model = Model("deepseek/deepseek-coder")
+            elif model == "deepseek-reasoner":
+                main_model = Model("deepseek/deepseek-reasoner")
             elif model == "llama3.1-405b":
                 main_model = Model("openrouter/meta-llama/llama-3.1-405b-instruct")
             else:
@@ -324,8 +320,6 @@ def do_idea(
 
 if __name__ == "__main__":
     args = parse_arguments()
-    if args.is_debug:
-        print(args)
 
     # Check available GPUs and adjust parallel processes if necessary
     available_gpus = get_available_gpus(args.gpus)
@@ -342,12 +336,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Create client
-    print("We are using model: "+args.model)
     client, client_model = create_client(args.model)
-
-    #added by minglei yuan
-    if args.is_debug:
-        print(f"BASE_DIR:{osp.join('templates', args.experiment)}")
 
     base_dir = osp.join("templates", args.experiment)
     results_dir = osp.join("results", args.experiment)
