@@ -320,7 +320,6 @@ def do_idea(
 
 if __name__ == "__main__":
     args = parse_arguments()
-
     # Check available GPUs and adjust parallel processes if necessary
     available_gpus = get_available_gpus(args.gpus)
     if args.parallel > len(available_gpus):

@@ -8,6 +8,7 @@ import openai
 import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 
+
 MAX_NUM_TOKENS = 4096
 
 AVAILABLE_LLMS = [
@@ -59,6 +60,7 @@ AVAILABLE_LLMS = [
     "gemini-2.0-flash-thinking-exp-01-21",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-exp-03-25",
+    "qwen3:32b",                    #新增本地Ollama模型标识 by mlyuan
 ]
 
 
@@ -347,5 +349,15 @@ def create_client(model):
             api_key=os.environ["GEMINI_API_KEY"],
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         ), model
+    # add by mlyuan
+    elif model.startswith("qwen3"):
+        print(f"Using local Ollama model {model} via REST API.")
+        base_url="http://192.168.0.166:11434"
+        print(base_url)
+        return openai.OpenAI(
+            api_key=os.getenv("OLLAMA_API_KEY", ""),  # 本地服务无需API密钥则留空
+            base_url=os.getenv("OLLAMA_API_BASE", base_url),
+        ), model
+
     else:
         raise ValueError(f"Model {model} not supported.")
