@@ -6,7 +6,7 @@
         "Interestingness": 6,
         "Feasibility": 4,
         "Novelty": 4,
-        "novel": false
+        "novel": true
     },
     {
         "Name": "layerwise_learning_rates",
@@ -15,6 +15,24 @@
         "Interestingness": 4,
         "Feasibility": 6,
         "Novelty": 2,
+        "novel": false
+    },
+    {
+        "Name": "dynamic_temperature_annealing",
+        "Title": "Optimal Temperature Scheduling for Improved Language Model Calibration",
+        "Experiment": "Implement multiple temperature scheduling strategies (linear, exponential, cosine annealing) where temperature starts at 2.0 and decays to 1.0. Compare these with fixed-temperature baselines. Track calibration metrics (ECE, Brier score), training dynamics, and generation quality. Include ablation studies on initial temperature and decay rates. Use cosine annealing as the primary comparison due to its proven effectiveness in learning rate scheduling.",
+        "Interestingness": 9,
+        "Feasibility": 8,
+        "Novelty": 8,
+        "novel": false
+    },
+    {
+        "Name": "adaptive_gradient_clipping",
+        "Title": "Adaptive Gradient Clipping for Stable Transformer Training",
+        "Experiment": "Implement dynamic gradient clipping with three strategies: 1) Moving average of gradient norms (threshold = \u03b1 * avg_grad_norm), 2) Inverse sqrt decay (threshold = initial_clip / sqrt(step)), and 3) Exponential decay (threshold = initial_clip * e^(-\u03b2*step)). Compare against fixed clipping baselines using three metrics: 1) Gradient norm stability (variance across steps), 2) Convergence speed (training loss at 10%/50%/90% training progress), and 3) Final validation performance (loss/generation metrics). Track hyperparameter sensitivity (\u03b1, \u03b2, initial_clip) and include ablation studies for different decay schedules.",
+        "Interestingness": 8,
+        "Feasibility": 9,
+        "Novelty": 7,
         "novel": false
     }
 ]

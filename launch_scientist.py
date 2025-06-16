@@ -334,11 +334,50 @@ if __name__ == "__main__":
     if args.writeup == "latex" and not check_latex_dependencies():
         sys.exit(1)
 
+    print("*"*80)
+    print("Create Client Start ")
+    print("*" * 80)
     # Create client
     client, client_model = create_client(args.model)
 
+    if client is None:
+        print("❌ Failed to create client: returned None.")
+        sys.exit(1)
+    else:
+        print("✅ Client created successfully.")
+        print(client)
+        print(f"📦 Client type: {type(client)}")
+        print(f"🧠 Model identifier used in client: {client_model}")
+        if hasattr(client, "base_url") and hasattr(client, "api_key"):
+            print(f"🌐 Ollama client base_url: {client.base_url}")
+            print(f"🧠 Ollama client api_key: {client.api_key}")
+
+    print("*"*80)
+    print("Create Client End ")
+    print("*" * 80)
+
     base_dir = osp.join("templates", args.experiment)
     results_dir = osp.join("results", args.experiment)
+
+    print("*"*80)
+    print("Generate Ideas Start")
+    print("*" * 80)
+
+    print("*"*80)
+    print("Test Client")
+
+    response = client.chat.completions.create(
+        model="qwen3:32b",  # 必须与你在 Ollama 中加载的模型一致
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Tell me a joke."}
+        ],
+        temperature=0.7,
+        max_tokens=512,
+    )
+    print(response.choices[0].message.content)
+
+
     ideas = generate_ideas(
         base_dir,
         client=client,
@@ -347,6 +386,13 @@ if __name__ == "__main__":
         max_num_generations=args.num_ideas,
         num_reflections=NUM_REFLECTIONS,
     )
+    print("*"*80)
+    print("Generate Ideas End")
+    print("*" * 80)
+
+    print("*" * 80)
+    print("Check Idea Novelty Start")
+    print("*" * 80)
     if not args.skip_novelty_check:
         ideas = check_idea_novelty(
             ideas,
@@ -355,6 +401,9 @@ if __name__ == "__main__":
             model=client_model,
             engine=args.engine,
         )
+    print("*" * 80)
+    print("Check Idea Novelty End")
+    print("*" * 80)
 
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
         json.dump(ideas, f, indent=4)

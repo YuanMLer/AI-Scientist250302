@@ -60,7 +60,7 @@ AVAILABLE_LLMS = [
     "gemini-2.0-flash-thinking-exp-01-21",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-exp-03-25",
-    "qwen3:32b",                    #新增本地Ollama模型标识 by mlyuan
+    "ollama/qwen3:32b",                    #新增本地Ollama模型标识 by mlyuan
 ]
 
 
@@ -109,6 +109,25 @@ def get_batch_responses_from_llm(
             max_tokens=MAX_NUM_TOKENS,
             n=n_responses,
             stop=None,
+        )
+        content = [r.message.content for r in response.choices]
+        new_msg_history = [
+            new_msg_history + [{"role": "assistant", "content": c}] for c in content
+        ]
+    # add by mlyuan
+    elif model in ["qwen3:32b", "deepseek-r1:70b"]:  # [NEW branch for Qwen-3 (32B) model support] add by mlyuan
+        new_msg_history = msg_history + [{"role": "user", "content": msg}]
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_message},
+                *new_msg_history,
+            ],
+            temperature=temperature,
+            max_tokens=MAX_NUM_TOKENS,
+            n=n_responses,
+            stop=None,
+            seed=0,
         )
         content = [r.message.content for r in response.choices]
         new_msg_history = [
@@ -273,6 +292,24 @@ def get_response_from_llm(
         )
         content = response.choices[0].message.content
         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
+
+    # add by mlyuan
+    elif model in ["qwen3:32b", "deepseek-r1:70b"]:  # [NEW branch for Qwen-3 (32B) model support] add by mlyuan
+        # Determine base URL for Ollama API (use provided client.base_url if available, otherwise env or default)
+        new_msg_history = msg_history + [{"role": "user", "content": msg}]
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_message},
+                *new_msg_history,
+            ],
+            temperature=temperature,
+            max_tokens=MAX_NUM_TOKENS,
+            n=1,
+        )
+        content = response.choices[0].message.content
+        new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
+
     else:
         raise ValueError(f"Model {model} not supported.")
 
@@ -321,13 +358,13 @@ def create_client(model):
         print(f"Using Anthropic API with model {model}.")
         return anthropic.Anthropic(), model
     elif model.startswith("bedrock") and "claude" in model:
-        client_model = model.split("/")[-1]
-        print(f"Using Amazon Bedrock with model {client_model}.")
-        return anthropic.AnthropicBedrock(), client_model
+        model = model.split("/")[-1]
+        print(f"Using Amazon Bedrock with model {model}.")
+        return anthropic.AnthropicBedrock(), model
     elif model.startswith("vertex_ai") and "claude" in model:
-        client_model = model.split("/")[-1]
-        print(f"Using Vertex AI with model {client_model}.")
-        return anthropic.AnthropicVertex(), client_model
+        model = model.split("/")[-1]
+        print(f"Using Vertex AI with model {model}.")
+        return anthropic.AnthropicVertex(), model
     elif 'gpt' in model or "o1" in model or "o3" in model:
         print(f"Using OpenAI API with model {model}.")
         return openai.OpenAI(), model
@@ -350,14 +387,17 @@ def create_client(model):
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         ), model
     # add by mlyuan
-    elif model.startswith("qwen3"):
+    elif model.startswith("ollama"):
+        model_name = model.split("/")[-1]
         print(f"Using local Ollama model {model} via REST API.")
-        base_url="http://192.168.0.166:11434"
-        print(base_url)
-        return openai.OpenAI(
-            api_key=os.getenv("OLLAMA_API_KEY", ""),  # 本地服务无需API密钥则留空
-            base_url=os.getenv("OLLAMA_API_BASE", base_url),
-        ), model
+        base_url = os.getenv("OLLAMA_API_BASE", "http://127.0.0.1:11434/v1")
+
+        client = openai.OpenAI(
+            api_key="ollama-compatible",  # ⚠️ 必须非空字符串
+            base_url=base_url  # ⚠️ 必须带 `/v1`
+        )
+        return client, model_name
+
 
     else:
         raise ValueError(f"Model {model} not supported.")
